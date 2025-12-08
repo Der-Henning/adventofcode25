@@ -96,13 +96,14 @@ pub fn part_2() {
         let mut tree_row = vec![0; cols];
         for (i, char) in row.chars().enumerate() {
             // the number of options always propagate downwards
-            // Only under the splitter the possibility is zero
-            if char != '^' {
-                let timelines = tree[j].get(i).unwrap();
-                tree_row[i] += timelines;
-            }
-            // if next to the beam is a splitter, these timeline could create the beam
+            // if next to the beam is a splitter, these timeline could also create the beam
             if char == '|' {
+                // Ray from above
+                if row.chars().nth(i).unwrap() == '|' {
+                    let timelines = tree[j].get(i).unwrap();
+                    tree_row[i] = *timelines;
+                }
+
                 // Splitter on the left
                 if let Some(left_char) = row.chars().nth(i - 1)
                     && left_char == '^'
@@ -110,6 +111,7 @@ pub fn part_2() {
                     let timelines = tree[j].get(i - 1).unwrap();
                     tree_row[i] += timelines;
                 }
+
                 // Splitter on the right
                 if let Some(right_char) = row.chars().nth(i + 1)
                     && right_char == '^'
