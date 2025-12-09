@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use std::hash::Hash;
 
 use crate::utils::get_input;
 
@@ -68,16 +67,19 @@ impl Line {
     fn new(a: Point, b: Point) -> Self {
         Self { a, b }
     }
+
+    fn bbox(&self) -> (i64, i64, i64, i64) {
+        let (min_lx, max_lx) = (self.a.x.min(self.b.x), self.a.x.max(self.b.x));
+        let (min_ly, max_ly) = (self.a.y.min(self.b.y), self.a.y.max(self.b.y));
+        (min_lx, max_lx, min_ly, max_ly)
+    }
 }
 
 pub fn part_2() {
     let data = get_data();
 
     // Create lines
-    let mut lines: Vec<Line> = data
-        .windows(2)
-        .map(|w| Line::new(w[0], w[1]))
-        .collect();
+    let mut lines: Vec<Line> = data.windows(2).map(|w| Line::new(w[0], w[1])).collect();
     lines.push(Line::new(*data.last().unwrap(), *data.first().unwrap()));
 
     // Check for every rectangle, whether any line intersects with it
@@ -89,8 +91,7 @@ pub fn part_2() {
             let (min_x, max_x) = (a.x.min(b.x), a.x.max(b.x));
             let (min_y, max_y) = (a.y.min(b.y), a.y.max(b.y));
             !lines.iter().any(|l| {
-                let (min_lx, max_lx) = (l.a.x.min(l.b.x), l.a.x.max(l.b.x));
-                let (min_ly, max_ly) = (l.a.y.min(l.b.y), l.a.y.max(l.b.y));
+                let (min_lx, max_lx, min_ly, max_ly) = l.bbox();
                 // check for intersection
                 min_lx < max_x && max_lx > min_x && min_ly < max_y && max_ly > min_y
             })
