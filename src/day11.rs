@@ -4,8 +4,7 @@ use crate::utils::get_input;
 
 const USE_TEST_DATA: bool = false;
 
-#[allow(dead_code)]
-const TEST_DATA: &str = r#"
+const TEST_DATA_PART_1: &str = r#"
 aaa: you hhh
 you: bbb ccc
 bbb: ddd eee
@@ -18,8 +17,7 @@ hhh: ccc fff iii
 iii: out
 "#;
 
-#[allow(dead_code)]
-const TEST_DATA_2: &str = r#"
+const TEST_DATA_PART_2: &str = r#"
 svr: aaa bbb
 aaa: fft
 fft: ccc
@@ -35,42 +33,52 @@ ggg: out
 hhh: out
 "#;
 
-fn get_data(part: usize) -> HashMap<String, Vec<String>> {
-    let mut data_str = get_input(11).unwrap();
-    if USE_TEST_DATA {
+// the device names are always made of 3 characters.
+// so I store them in 3 bytes fixed length arrays
+type Device = [u8; 3];
+
+fn device(name: &str) -> Device {
+    name.as_bytes().try_into().unwrap()
+}
+
+fn get_data(part: usize) -> HashMap<Device, Vec<Device>> {
+    let data_str = if USE_TEST_DATA {
         if part == 1 {
-            data_str = TEST_DATA.to_string();
+            TEST_DATA_PART_1.to_string()
         } else {
-            data_str = TEST_DATA_2.to_string();
+            TEST_DATA_PART_2.to_string()
         }
-    }
+    } else {
+        get_input(11).unwrap()
+    };
 
     data_str
         .trim()
         .split("\n")
         .map(|r| {
             let (k, v) = r.split_once(": ").unwrap();
-            (k.to_string(), v.split(' ').map(|c| c.to_string()).collect())
+            (device(k), v.split_whitespace().map(device).collect())
         })
         .collect()
 }
 
 // use recursion with caching
 // Calculate the number of possible paths between two devices
+// walking backwards from target to start
 fn walk(
-    data: &HashMap<String, Vec<String>>,
-    cache: &mut HashMap<String, i64>,
-    device: &str,
-    target: &str,
-) -> i64 {
-    // On cache hit return cached value
-    if let Some(c) = cache.get(device) {
-        return *c;
-    }
+    data: &HashMap<Device, Vec<Device>>,
+    cache: &mut HashMap<Device, u64>,
+    device: &Device,
+    target: &Device,
+) -> u64 {
     // When target is reached return 1
     // Recursion base case
     if device == target {
         return 1;
+    }
+    // On cache hit return cached value
+    if let Some(cached_sum) = cache.get(device) {
+        return *cached_sum;
     }
     // get connected devices and calculate the sum of possible path recursively
     // zero when no device is connected
@@ -78,18 +86,19 @@ fn walk(
         Some(connections) => connections
             .iter()
             .map(|device| walk(data, cache, device, target))
-            .sum::<i64>(),
+            .sum(),
         None => 0,
     };
     // cache calculated sum
-    cache.insert(device.to_string(), sum);
+    cache.insert(*device, sum);
     sum
 }
 
 pub fn part_1() {
     let data = get_data(1);
 
-    let sum = walk(&data, &mut HashMap::new(), "you", "out");
+    // simply walk all paths from "you" to "out"
+    let sum = walk(&data, &mut HashMap::new(), &device("you"), &device("out"));
 
     assert_eq!(sum, 636);
     println!("Part 1: {sum}");
@@ -99,22 +108,24 @@ pub fn part_2() {
     let data = get_data(2);
 
     // calculate the possible paths from one station to another
+    // multiplying the options for each part gives the full number of possible paths
     // svr -> fft -> dac -> out
-    let srv_fft = walk(&data, &mut HashMap::new(), "svr", "fft");
-    let fft_dac = walk(&data, &mut HashMap::new(), "fft", "dac");
-    let dac_out = walk(&data, &mut HashMap::new(), "dac", "out");
+    let srv_fft = walk(&data, &mut HashMap::new(), &device("svr"), &device("fft"));
+    let fft_dac = walk(&data, &mut HashMap::new(), &device("fft"), &device("dac"));
+    let dac_out = walk(&data, &mut HashMap::new(), &device("dac"), &device("out"));
     let svr_fft_dac_out = srv_fft * fft_dac * dac_out;
 
     // svr -> dac -> fft -> out
-    let srv_dac = walk(&data, &mut HashMap::new(), "svr", "dac");
-    let dac_fft = walk(&data, &mut HashMap::new(), "dac", "fft");
-    let fft_out = walk(&data, &mut HashMap::new(), "fft", "out");
+    // dac -> fft is actually 0 in the given data
+    // so this part could be skipped in this case
+    let srv_dac = walk(&data, &mut HashMap::new(), &device("svr"), &device("dac"));
+    let dac_fft = walk(&data, &mut HashMap::new(), &device("dac"), &device("fft"));
+    let fft_out = walk(&data, &mut HashMap::new(), &device("fft"), &device("out"));
     let svr_dac_fft_out = srv_dac * dac_fft * fft_out;
 
-    // Multiplying the possible paths between the stations gives the number of possible paths
     // Adding both possible combinations gives the absolute number
     let sum = svr_fft_dac_out + svr_dac_fft_out;
 
-    assert_eq!(sum, 509312913844956);
+    assert_eq!(sum, 509_312_913_844_956);
     println!("Part 2: {sum}");
 }
