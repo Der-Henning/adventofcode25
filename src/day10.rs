@@ -14,9 +14,9 @@ fn press(lights: &[bool], button: &Vec<bool>) -> Vec<bool> {
     lights.iter().zip(button).map(|(a, b)| *a ^ *b).collect()
 }
 
-type Machine = Vec<(Vec<bool>, Vec<Vec<bool>>, Vec<i32>)>;
+type Data = (Vec<bool>, Vec<Vec<bool>>, Vec<i32>);
 
-fn get_data() -> Machine {
+fn get_data() -> Vec<Data> {
     let data_str = get_input(10).unwrap();
     // let data_str = TEST_DATA;
 
@@ -29,7 +29,7 @@ fn get_data() -> Machine {
             let s: [&str; 3] = c.extract().1;
             let target: Vec<bool> = s[0].chars().map(|s| s == '#').collect();
             let buttons_len = target.len();
-            let mut buttons = button_re
+            let buttons = button_re
                 .captures_iter(s[1])
                 .map(|c| {
                     let s: [&str; 1] = c.extract().1;
@@ -40,14 +40,6 @@ fn get_data() -> Machine {
                     b
                 })
                 .collect::<Vec<_>>();
-            buttons.sort_unstable_by(|a, b| {
-                a.iter()
-                    .cloned()
-                    .map(i32::from)
-                    .sum::<i32>()
-                    .cmp(&b.iter().cloned().map(i32::from).sum::<i32>())
-            });
-            buttons.reverse();
             let joltages = s[2].split(",").map(|i| i.parse().unwrap()).collect();
             (target, buttons, joltages)
         })
@@ -70,6 +62,7 @@ pub fn part_1() {
                 for b in buttons {
                     let light = press(l, b);
                     if light == *target {
+                        // target reached, break out of loop
                         break 'outer;
                     }
                     new_lights.push(light);
@@ -82,7 +75,7 @@ pub fn part_1() {
 
     let sum: i32 = levels.iter().sum();
 
-    // assert_eq!(sum, 441);
+    assert_eq!(sum, 441);
     println!("Part 1: {sum}");
 }
 
@@ -91,7 +84,7 @@ pub fn part_2() {
 
     let mut clicks = Vec::new();
 
-    for (_, buttons, target) in data.iter() {
+    for (_, buttons, joltages) in data.iter() {
         // Solve linear system using the good_lp crate
         // This crate supports integer problems
 
@@ -109,13 +102,11 @@ pub fn part_2() {
 
         // Each joltage value is a constraint to the problem
         // The equation is given by the button properties
-        for (j, t) in target.iter().enumerate() {
+        for (j, t) in joltages.iter().enumerate() {
             let expr = variables
                 .iter()
                 .enumerate()
-                .map(|(i, x)| (x, buttons[i][j]))
-                .filter(|(_, b)| *b)
-                .map(|(x, _)| x)
+                .filter_map(|(i, x)| if buttons[i][j] { Some(x) } else { None })
                 .sum::<Expression>();
             problem = problem.with(expr.eq(*t));
         }
