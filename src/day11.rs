@@ -68,29 +68,29 @@ fn get_data(part: usize) -> HashMap<Device, Vec<Device>> {
 fn walk(
     data: &HashMap<Device, Vec<Device>>,
     cache: &mut HashMap<Device, u64>,
-    device: &Device,
+    start: &Device,
     target: &Device,
 ) -> u64 {
     // When target is reached return 1
     // Recursion base case
-    if device == target {
+    if start == target {
         return 1;
     }
     // On cache hit return cached value
-    if let Some(cached_sum) = cache.get(device) {
+    if let Some(cached_sum) = cache.get(start) {
         return *cached_sum;
     }
     // get connected devices and calculate the sum of possible path recursively
     // zero when no device is connected
-    let sum = match data.get(device) {
+    let sum = match data.get(start) {
         Some(connections) => connections
             .iter()
-            .map(|device| walk(data, cache, device, target))
+            .map(|next| walk(data, cache, next, target))
             .sum(),
         None => 0,
     };
     // cache calculated sum
-    cache.insert(*device, sum);
+    cache.insert(*start, sum);
     sum
 }
 

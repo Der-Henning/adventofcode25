@@ -14,7 +14,7 @@ fn press(lights: &[bool], button: &Vec<bool>) -> Vec<bool> {
     lights.iter().zip(button).map(|(a, b)| *a ^ *b).collect()
 }
 
-type Data = (Vec<bool>, Vec<Vec<bool>>, Vec<i32>);
+type Data = (Vec<bool>, Vec<Vec<bool>>, Vec<u32>);
 
 fn get_data() -> Vec<Data> {
     let data_str = get_input(10).unwrap();
@@ -89,7 +89,6 @@ pub fn part_2() {
         // This crate supports integer problems
 
         // The problem variables are the number of presses for each button
-        // This is to be minimized
         // Each variable can be zero or a positive integer
         let mut vars = variables!();
         let variables = (0..buttons.len())
@@ -97,8 +96,8 @@ pub fn part_2() {
             .collect::<Vec<_>>();
 
         // The expression to minimize is the sum of the variables
-        let expression = variables.iter().sum::<Expression>();
-        let mut problem = vars.minimise(&expression).using(default_solver);
+        let objective = variables.iter().sum::<Expression>();
+        let mut problem = vars.minimise(&objective).using(default_solver);
 
         // Each joltage value is a constraint to the problem
         // The equation is given by the button properties
@@ -113,7 +112,7 @@ pub fn part_2() {
 
         // Solve the lp
         let solution = problem.solve().unwrap();
-        clicks.push(solution.eval(expression));
+        clicks.push(solution.eval(objective));
     }
 
     let sum = clicks.iter().sum::<f64>() as i32;
